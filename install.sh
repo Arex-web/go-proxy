@@ -19,7 +19,21 @@ if [ -f .env ]; then
   set +a
 fi
 
-ADDR="${1:-${PROXY_ADDR:-0.0.0.0:1080}}"
+if [ -n "${1:-}" ]; then
+  ADDR="$1"
+elif [ -n "${PROXY_ADDR:-}" ]; then
+  ADDR="$PROXY_ADDR"
+elif [ -n "${PROXY_PORT:-}" ]; then
+  ADDR="0.0.0.0:$PROXY_PORT"
+elif [ -n "${PORT:-}" ]; then
+  ADDR="0.0.0.0:$PORT"
+else
+  ADDR="0.0.0.0:1080"
+fi
+case "$ADDR" in
+  *:*) ;;
+  *) ADDR="0.0.0.0:$ADDR" ;;
+esac
 USER="${2:-${PROXY_USERNAME:-}}"
 PASS="${3:-${PROXY_PASSWORD:-}}"
 

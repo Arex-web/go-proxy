@@ -28,6 +28,9 @@ func main() {
 	flag.BoolVar(&verbose, "v", false, "Verbose logging")
 	flag.Parse()
 
+	// Accept bare ports on the flag too: -addr 26398 -> 0.0.0.0:26398
+	addr = normalizeAddr(addr)
+
 	if err := run(addr, username, password, timeout, verbose); err != nil {
 		log.Fatalf("server error: %v", err)
 	}

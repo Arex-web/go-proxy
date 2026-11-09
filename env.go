@@ -46,6 +46,20 @@ func loadEnvFile(path string) bool {
 	return true
 }
 
+// normalizeAddr accepts "26398" (bare port) -> "0.0.0.0:26398", ":26398" stays, "host:port" stays.
+func normalizeAddr(addr string) string {
+	addr = strings.TrimSpace(addr)
+	if addr == "" {
+		return "0.0.0.0:1080"
+	}
+	if strings.Contains(addr, ":") {
+		// ":26398" is valid for net.Listen (all interfaces); leave as-is.
+		return addr
+	}
+	// Bare port like "26398" -> all interfaces
+	return "0.0.0.0:" + addr
+}
+
 // loadEnv loads config from .env-style files.
 // Order: $PROXY_ENV_FILE, ./.env, ./proxy.env, /etc/proxy-server/proxy.env
 // First found wins, but later files fill in missing keys (via no-override rule).
@@ -59,12 +73,13 @@ func loadEnv() {
 	}
 	// Convenient aliases:
 	//   PROXY_PORT=8080  ->  PROXY_ADDR=0.0.0.0:8080 (if addr not set)
-	//   PORT=8080        ->  PROXY_PORT=8080
-	if os.Getenv("PROXY_ADDR") == "" {
-		if p := os.Getenv("PROXY_PORT"); p != "" {
-			_ = os.Setenv("PROXY_ADDR", "0.0.0.0:"+p)
-		} else if p := os.Getenv("PORT"); p != "" {
-			_ = os.Setenv("PROXY_ADDR", "0.0.0.0:"+p)
-		}
+	//   PORT=8080        ->  PROXY_ADDR=0.0.0.0:8080
+	//   PROXY_ADDR=26398 (bare port) -> 0.0.0.0:26398
+	if p := os.Getenv("PROXY_ADDR"); p != "" {
+		_ = os.Setenv("PROXY_ADDR", normalizeAddr(p))
+	} else if p := os.Getenv("PROXY_PORT"); p != "" {
+		_ = os.Setenv("PROXY_ADDR", "0.0.0.0:"+strings.TrimSpace(p))
+	} else if p := os.Getenv("PORT"); p != "" {
+		_ = os.Setenv("PROXY_ADDR", "0.0.0.0:"+strings.TrimSpace(p))
 	}
 }
