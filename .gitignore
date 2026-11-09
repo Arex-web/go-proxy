@@ -1,0 +1,4 @@
+/proxy-server
+.env
+proxy.env
+*.log
