@@ -1,5 +1,5 @@
-#!/usr/bin/env bash
-set -euo pipefail
+#!/bin/sh
+set -eu
 cd "$(dirname "$0")"
 
 # Install proxy-server as a systemd service.
@@ -12,11 +12,10 @@ cd "$(dirname "$0")"
 # Creates: /usr/local/bin/proxy-server, /etc/proxy-server/proxy.env,
 #          /etc/systemd/system/proxy-server.service
 
-# Load .env for defaults (flags still win)
-if [[ -f .env ]]; then
+if [ -f .env ]; then
   set -a
   # shellcheck disable=SC1091
-  source .env 2>/dev/null || true
+  . ./.env 2>/dev/null || true
   set +a
 fi
 
@@ -24,7 +23,7 @@ ADDR="${1:-${PROXY_ADDR:-0.0.0.0:1080}}"
 USER="${2:-${PROXY_USERNAME:-}}"
 PASS="${3:-${PROXY_PASSWORD:-}}"
 
-if [[ $EUID -ne 0 ]]; then
+if [ "$(id -u)" -ne 0 ]; then
   echo "Run with sudo: sudo $0 $*"
   exit 1
 fi
@@ -36,18 +35,10 @@ install -m 0755 ./proxy-server /usr/local/bin/proxy-server
 
 echo "[*] Writing config /etc/proxy-server/proxy.env"
 mkdir -p /etc/proxy-server
-if [[ -n "$USER" ]]; then
-  cat > /etc/proxy-server/proxy.env <<EOF
-PROXY_ADDR=$ADDR
-PROXY_USERNAME=$USER
-PROXY_PASSWORD=$PASS
-EOF
+if [ -n "$USER" ]; then
+  printf 'PROXY_ADDR=%s\nPROXY_USERNAME=%s\nPROXY_PASSWORD=%s\n' "$ADDR" "$USER" "$PASS" > /etc/proxy-server/proxy.env
 else
-  cat > /etc/proxy-server/proxy.env <<EOF
-PROXY_ADDR=$ADDR
-# PROXY_USERNAME= 
-# PROXY_PASSWORD=
-EOF
+  printf 'PROXY_ADDR=%s\n# PROXY_USERNAME=\n# PROXY_PASSWORD=\n' "$ADDR" > /etc/proxy-server/proxy.env
   echo "    (no auth configured — public proxy. Re-run with user/pass to protect it.)"
 fi
 chmod 600 /etc/proxy-server/proxy.env
@@ -84,8 +75,7 @@ echo "[+] Installed. Status:"
 systemctl status proxy-server --no-pager -l | head -n 15
 echo
 echo "Logs:    journalctl -u proxy-server -f"
-echo "Test:    $0" | sed 's|.*|curl -x … (see ./test.sh)|'
-if [[ -n "$USER" ]]; then
+if [ -n "$USER" ]; then
   echo "  curl -x http://${USER}:${PASS}@${ADDR} https://example.com"
   echo "  curl -x socks5h://${USER}:${PASS}@${ADDR} https://example.com"
 else
@@ -93,5 +83,5 @@ else
   echo "  curl -x socks5h://${ADDR} https://example.com"
 fi
 echo
-echo "Firewall (if ufw): sudo ufw allow ${ADDR##*:}/tcp"
-echo "Firewall (if firewalld): sudo firewall-cmd --permanent --add-port=${ADDR##*:}/tcp && sudo firewall-cmd --reload"
+echo "Firewall (if ufw): sudo ufw allow $(echo "$ADDR" | cut -d: -f2)/tcp"
+echo "Firewall (if firewalld): sudo firewall-cmd --permanent --add-port=$(echo "$ADDR" | cut -d: -f2)/tcp && sudo firewall-cmd --reload"

@@ -1,38 +1,43 @@
-#!/usr/bin/env bash
-set -euo pipefail
+#!/bin/sh
+set -eu
 cd "$(dirname "$0")"
 
 # Quick dev run — no systemd needed.
 # Loads .env automatically (if present). Flags override .env.
+# Runs with both sh and bash.
 # Usage:
 #   ./run.sh                                   # reads .env (or defaults)
 #   ./run.sh 0.0.0.0:8080 myuser mypass -v    # args override .env
-#   PROXY_ADDR=... ./run.sh                   # exported env overrides .env
 
-# Load .env (don't override already-exported vars)
-if [[ -f .env ]]; then
+if [ -f .env ]; then
   set -a
   # shellcheck disable=SC1091
-  source .env 2>/dev/null || true
+  . ./.env 2>/dev/null || true
   set +a
 fi
 
+# Positional args override .env
 ADDR="${1:-${PROXY_ADDR:-0.0.0.0:1080}}"
 USER="${2:-${PROXY_USERNAME:-}}"
 PASS="${3:-${PROXY_PASSWORD:-}}"
-shift $(( $# > 3 ? 3 : $# )) 2>/dev/null || true
-EXTRA=("$@")
+if [ "$#" -gt 3 ]; then
+  shift 3
+else
+  shift "$#"
+fi
 
-if [[ ! -x ./proxy-server ]]; then
+if [ ! -x ./proxy-server ]; then
   echo "[*] proxy-server not found, building..."
   ./build.sh
 fi
 
-ARGS=(-addr "$ADDR")
-[[ -n "$USER" ]] && ARGS+=(-username "$USER" -password "$PASS")
-[[ ${#EXTRA[@]} -gt 0 ]] && ARGS+=("${EXTRA[@]}")
-
-echo "[*] Starting on ${ADDR} (.env: $([[ -f .env ]] && echo ".env" || echo "none"))"
-echo "    SOCKS5: curl -x socks5h://${USER:+${USER}:${PASS}@}${ADDR} https://example.com"
-echo "    HTTP:   curl -x http://${USER:+${USER}:${PASS}@}${ADDR} https://example.com"
-exec ./proxy-server "${ARGS[@]}"
+echo "[*] Starting on ${ADDR} (.env: $([ -f .env ] && echo ".env" || echo "none"))"
+if [ -n "$USER" ]; then
+  echo "    SOCKS5: curl -x socks5h://${USER}:${PASS}@${ADDR} https://example.com"
+  echo "    HTTP:   curl -x http://${USER}:${PASS}@${ADDR} https://example.com"
+  exec ./proxy-server -addr "$ADDR" -username "$USER" -password "$PASS" "$@"
+else
+  echo "    SOCKS5: curl -x socks5h://${ADDR} https://example.com"
+  echo "    HTTP:   curl -x http://${ADDR} https://example.com"
+  exec ./proxy-server -addr "$ADDR" "$@"
+fi

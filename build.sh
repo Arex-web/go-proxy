@@ -1,5 +1,5 @@
-#!/usr/bin/env bash
-set -euo pipefail
+#!/bin/sh
+set -eu
 cd "$(dirname "$0")"
 echo "[*] Building proxy-server..."
 CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o proxy-server .

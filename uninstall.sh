@@ -1,11 +1,11 @@
-#!/usr/bin/env bash
-set -euo pipefail
+#!/bin/sh
+set -eu
 cd "$(dirname "$0")"
 
 # Uninstall systemd service.
 # Usage: sudo ./uninstall.sh
 
-if [[ $EUID -ne 0 ]]; then
+if [ "$(id -u)" -ne 0 ]; then
   echo "Run with sudo: sudo $0"
   exit 1
 fi
