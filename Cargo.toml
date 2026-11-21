@@ -1,0 +1,18 @@
+[package]
+name = "proxy-server"
+version = "0.1.0"
+edition = "2021"
+description = "SOCKS5 + HTTP forward proxy on one port (protocol auto-detected)"
+
+[[bin]]
+name = "proxy-server"
+path = "src/main.rs"
+
+[dependencies]
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

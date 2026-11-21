@@ -1,8 +1,8 @@
-# SOCKS5 + HTTP Proxy Server (Go + Bash)
+# SOCKS5 + HTTP Proxy Server (Rust)
 
 A single-binary, zero-dependency proxy that turns your Linux server into a
 **SOCKS5 + HTTP forward proxy on one port** (protocol auto-detected),
-with optional username/password auth and a bash installer + systemd unit.
+with optional username/password auth and a shell installer + systemd unit.
 
 ## Build & Run (quick)
 
@@ -73,6 +73,7 @@ Run the bundled tester:
 - SOCKS5 `CONNECT` + `UDP ASSOCIATE` (RFC 1928), user/pass auth (RFC 1929).
 - HTTP `CONNECT` tunnels (HTTPS) + absolute-URI forwarding (plain HTTP).
 - Constant-time credential comparison, configurable dial timeout.
+- Zero external crates — std only.
 
 ## Uninstall
 
@@ -83,13 +84,17 @@ sudo ./uninstall.sh
 ## Files
 
 ```
-main.go        CLI flags + auto-detect listener
-socks5.go      SOCKS5 server (CONNECT / UDP ASSOCIATE)
-httpproxy.go   HTTP forward proxy (CONNECT / GET forwarding)
-config.go      Auth + timeout config
-build.sh       go build
-run.sh         quick dev run
-install.sh     systemd installer (run with sudo)
-uninstall.sh   remove service
-test.sh        curl smoke-tests
+src/main.rs        CLI flags + auto-detect listener
+src/socks5.rs      SOCKS5 server (CONNECT / UDP ASSOCIATE)
+src/httpproxy.rs   HTTP forward proxy (CONNECT / GET forwarding)
+src/config.rs      Auth + timeout config
+src/conn.rs        Buffered TCP connection + dial/tunnel helpers
+src/env.rs         .env loading + address normalization
+src/log.rs         Timestamped logging
+Cargo.toml         Crate manifest (no dependencies)
+build.sh           cargo build --release
+run.sh             quick dev run
+install.sh         systemd installer (run with sudo)
+uninstall.sh       remove service
+test.sh            curl smoke-tests
 ```

@@ -43,7 +43,8 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 echo "[*] Building..."
-CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o proxy-server .
+cargo build --release
+cp target/release/proxy-server ./proxy-server
 echo "[*] Installing binary to /usr/local/bin/proxy-server"
 install -m 0755 ./proxy-server /usr/local/bin/proxy-server
 
@@ -60,7 +61,7 @@ chmod 600 /etc/proxy-server/proxy.env
 echo "[*] Installing systemd unit /etc/systemd/system/proxy-server.service"
 cat > /etc/systemd/system/proxy-server.service <<'UNIT'
 [Unit]
-Description=SOCKS5+HTTP Proxy Server (Go)
+Description=SOCKS5+HTTP Proxy Server (Rust)
 After=network.target
 Wants=network.target
 

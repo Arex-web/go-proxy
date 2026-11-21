@@ -1,3 +1,4 @@
+/target
 /proxy-server
 .env
 proxy.env
