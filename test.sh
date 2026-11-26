@@ -2,35 +2,40 @@
 set -eu
 cd "$(dirname "$0")"
 
-# Test a running proxy (SOCKS5 + HTTP + auth).
+# Smoke-test a running proxy (SOCKS5 + HTTP + auth).
 # Usage:
 #   ./test.sh                          # assumes local, no auth
 #   ./test.sh 127.0.0.1:1080 user pass # custom
 #   PROXY=127.0.0.1:1080 PROXY_USERNAME=u PROXY_PASSWORD=p ./test.sh
+#
+# Exits non-zero if any check fails. MTProto itself cannot be checked with
+# curl; open the tg:// link printed by the server in Telegram instead.
 
 ADDR="${1:-${PROXY:-127.0.0.1:1080}}"
-USER="${2:-${PROXY_USERNAME:-}}"
-PASS="${3:-${PROXY_PASSWORD:-}}"
+USERNAME="${2:-${PROXY_USERNAME:-}}"
+PASSWORD="${3:-${PROXY_PASSWORD:-}}"
 
 AUTH=""
-if [ -n "$USER" ]; then
-  AUTH="${USER}:${PASS}@"
+if [ -n "$USERNAME" ]; then
+  AUTH="${USERNAME}:${PASSWORD}@"
 fi
 
-echo "Target: ${ADDR} (auth: $([ -n "$USER" ] && echo yes || echo no))"
+FAILED=0
+
+echo "Target: ${ADDR} (auth: $([ -n "$USERNAME" ] && echo yes || echo no))"
 echo
 
 check() {
   _label="$1"; shift
   _expect="$1"; shift
-  _code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 -x "$1" https://example.com 2>/dev/null || true)
-  # Normalize: curl prints 000 on transport failure
-  if [ -z "$_code" ]; then _code="000"; fi
-  _code=$(echo "$_code" | tr -d ' \n')
+  _url="$1"
+  _code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 -x "$_url" https://example.com 2>/dev/null || true)
+  _code=$(echo "${_code:-000}" | tr -d ' \n')
   if [ "$_code" = "$_expect" ]; then
     echo "  [PASS] $_label -> $_code"
   else
     echo "  [FAIL] $_label -> $_code (expected $_expect)"
+    FAILED=$((FAILED + 1))
   fi
 }
 
@@ -41,11 +46,15 @@ check "HTTP CONNECT " "200" "http://${AUTH}${ADDR}"
 echo "== SOCKS5 proxy =="
 check "SOCKS5       " "200" "socks5h://${AUTH}${ADDR}"
 
-if [ -n "$USER" ]; then
+if [ -n "$USERNAME" ]; then
   echo "== Auth enforcement (wrong password should fail) =="
-  check "HTTP badpass " "000" "http://${USER}:wrong@${ADDR}"
-  check "SOCKS5 badpass" "000" "socks5h://${USER}:wrong@${ADDR}"
+  check "HTTP badpass " "000" "http://${USERNAME}:wrong@${ADDR}"
+  check "SOCKS5 badpass" "000" "socks5h://${USERNAME}:wrong@${ADDR}"
 fi
 
 echo
+if [ "$FAILED" -ne 0 ]; then
+  echo "FAILED: ${FAILED} check(s)."
+  exit 1
+fi
 echo "Done."

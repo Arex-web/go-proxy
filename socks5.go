@@ -13,8 +13,8 @@ import (
 
 // SOCKS5 per RFC 1928 / RFC 1929
 const (
-	socksVersion       = 0x05
-	socksMethodNoAuth  = 0x00
+	socksVersion        = 0x05
+	socksMethodNoAuth   = 0x00
 	socksMethodUserPass = 0x02
 	socksMethodNoAccept = 0xFF
 
@@ -247,8 +247,20 @@ func doSOCKSConnect(client *bufferedConn, dialAddr string, cfg *Config) {
 
 	var wg sync.WaitGroup
 	wg.Add(2)
-	go func() { defer wg.Done(); _, _ = io.Copy(remote, client); if tc, ok := remote.(*net.TCPConn); ok { _ = tc.CloseWrite() } }()
-	go func() { defer wg.Done(); _, _ = io.Copy(client, remote); if tc, ok := client.Conn.(*net.TCPConn); ok { _ = tc.CloseWrite() } }()
+	go func() {
+		defer wg.Done()
+		_, _ = io.Copy(remote, client)
+		if tc, ok := remote.(*net.TCPConn); ok {
+			_ = tc.CloseWrite()
+		}
+	}()
+	go func() {
+		defer wg.Done()
+		_, _ = io.Copy(client, remote)
+		if tc, ok := client.Conn.(*net.TCPConn); ok {
+			_ = tc.CloseWrite()
+		}
+	}()
 	wg.Wait()
 }
 
@@ -336,23 +348,33 @@ func doSOCKSUDPAssociate(client *bufferedConn, cfg *Config) {
 		switch atyp[0] {
 		case socksAtypIPv4:
 			b := make([]byte, 4)
-			if _, err := io.ReadFull(client, b); err != nil { return }
+			if _, err := io.ReadFull(client, b); err != nil {
+				return
+			}
 			destHost = net.IP(b).String()
 		case socksAtypIPv6:
 			b := make([]byte, 16)
-			if _, err := io.ReadFull(client, b); err != nil { return }
+			if _, err := io.ReadFull(client, b); err != nil {
+				return
+			}
 			destHost = net.IP(b).String()
 		case socksAtypDomain:
 			lb := make([]byte, 1)
-			if _, err := io.ReadFull(client, lb); err != nil { return }
+			if _, err := io.ReadFull(client, lb); err != nil {
+				return
+			}
 			hb := make([]byte, int(lb[0]))
-			if _, err := io.ReadFull(client, hb); err != nil { return }
+			if _, err := io.ReadFull(client, hb); err != nil {
+				return
+			}
 			destHost = string(hb)
 		default:
 			return
 		}
 		pb := make([]byte, 2)
-		if _, err := io.ReadFull(client, pb); err != nil { return }
+		if _, err := io.ReadFull(client, pb); err != nil {
+			return
+		}
 		destPort = int(binary.BigEndian.Uint16(pb))
 		if frag != 0 {
 			// Frag≠0: cannot reliably resync (no payload length). Terminate association.

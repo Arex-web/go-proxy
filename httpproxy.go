@@ -75,8 +75,20 @@ func handleConnect(client *bufferedConn, req *http.Request, cfg *Config) {
 
 	var wg sync.WaitGroup
 	wg.Add(2)
-	go func() { defer wg.Done(); _, _ = io.Copy(remote, client); if tc, ok := remote.(*net.TCPConn); ok { _ = tc.CloseWrite() } }()
-	go func() { defer wg.Done(); _, _ = io.Copy(client, remote); if tc, ok := client.Conn.(*net.TCPConn); ok { _ = tc.CloseWrite() } }()
+	go func() {
+		defer wg.Done()
+		_, _ = io.Copy(remote, client)
+		if tc, ok := remote.(*net.TCPConn); ok {
+			_ = tc.CloseWrite()
+		}
+	}()
+	go func() {
+		defer wg.Done()
+		_, _ = io.Copy(client, remote)
+		if tc, ok := client.Conn.(*net.TCPConn); ok {
+			_ = tc.CloseWrite()
+		}
+	}()
 	wg.Wait()
 }
 
@@ -109,7 +121,7 @@ func doHTTPForward(client *bufferedConn, req *http.Request, cfg *Config) {
 	}
 
 	tr := &http.Transport{
-		DialContext: (&net.Dialer{Timeout: cfg.Timeout}).DialContext,
+		DialContext:       (&net.Dialer{Timeout: cfg.Timeout}).DialContext,
 		DisableKeepAlives: true,
 	}
 	httpClient := &http.Client{Transport: tr, Timeout: 0}

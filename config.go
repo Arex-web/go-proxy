@@ -4,7 +4,10 @@ import (
 	"bufio"
 	"crypto/subtle"
 	"encoding/base64"
+	"errors"
 	"net"
+	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -60,4 +63,59 @@ func (b *bufferedConn) Read(p []byte) (int, error) { return b.R.Read(p) }
 
 func listen(addr string) (net.Listener, error) {
 	return net.Listen("tcp", addr)
+}
+
+// isClosedError reports whether an Accept error just means the listener was
+// closed during shutdown.
+func isClosedError(err error) bool {
+	if err == nil {
+		return false
+	}
+	return errors.Is(err, net.ErrClosed) || strings.Contains(err.Error(), "use of closed network connection")
+}
+
+// envOr returns the environment value of key, or def when it is unset/empty.
+func envOr(key, def string) string {
+	if v := strings.TrimSpace(os.Getenv(key)); v != "" {
+		return v
+	}
+	return def
+}
+
+// envUint parses an unsigned integer from the environment, falling back to
+// def on absence or parse errors.
+func envUint(key string, def uint) uint {
+	raw := strings.TrimSpace(os.Getenv(key))
+	if raw == "" {
+		return def
+	}
+	value, err := strconv.ParseUint(raw, 10, 32)
+	if err != nil {
+		return def
+	}
+	return uint(value)
+}
+
+// envBool parses common truthy/falsy spellings; anything else yields def.
+func envBool(key string, def bool) bool {
+	switch strings.ToLower(strings.TrimSpace(os.Getenv(key))) {
+	case "1", "true", "yes", "y", "on":
+		return true
+	case "0", "false", "no", "n", "off":
+		return false
+	}
+	return def
+}
+
+// envDuration parses a Go duration (30s, 5m, 1h); anything else yields def.
+func envDuration(key string, def time.Duration) time.Duration {
+	raw := strings.TrimSpace(os.Getenv(key))
+	if raw == "" {
+		return def
+	}
+	value, err := time.ParseDuration(raw)
+	if err != nil || value <= 0 {
+		return def
+	}
+	return value
 }
