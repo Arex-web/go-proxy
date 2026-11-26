@@ -14,6 +14,9 @@ type Config struct {
 	Password string
 	Timeout  time.Duration
 	Verbose  bool
+
+	// MTProto is nil when the Telegram proxy is disabled.
+	MTProto *MTProtoConfig
 }
 
 func (c *Config) authEnabled() bool { return c.Username != "" }

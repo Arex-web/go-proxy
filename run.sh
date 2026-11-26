@@ -50,9 +50,15 @@ echo "[*] Starting on ${ADDR} (.env: $([ -f .env ] && echo ".env" || echo "none"
 if [ -n "$USER" ]; then
   echo "    SOCKS5: curl -x socks5h://${USER}:${PASS}@${ADDR} https://example.com"
   echo "    HTTP:   curl -x http://${USER}:${PASS}@${ADDR} https://example.com"
-  exec ./proxy-server -addr "$ADDR" -username "$USER" -password "$PASS" "$@"
 else
   echo "    SOCKS5: curl -x socks5h://${ADDR} https://example.com"
   echo "    HTTP:   curl -x http://${ADDR} https://example.com"
+fi
+if [ -n "${MTPROTO_SECRET:-}" ]; then
+  echo "    MTProto: enabled on ${ADDR}${MTPROTO_ADDR:+ (and ${MTPROTO_ADDR})}"
+fi
+if [ -n "$USER" ]; then
+  exec ./proxy-server -addr "$ADDR" -username "$USER" -password "$PASS" "$@"
+else
   exec ./proxy-server -addr "$ADDR" "$@"
 fi

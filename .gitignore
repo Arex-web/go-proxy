@@ -1,4 +1,6 @@
 /proxy-server
+/go-proxy
+/target/
 .env
 proxy.env
 *.log
